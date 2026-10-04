@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: rasad
       POSTGRES_USER: rasad
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rasad"]
@@ -16,7 +16,7 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: postgresql://rasad:${POSTGRES_PASSWORD:-change-me}@db:5432/rasad
+      DATABASE_URL: postgresql://rasad:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/rasad
       RASAD_API_KEY: ${RASAD_API_KEY:-}
       QWEN_BASE_URL: ${QWEN_BASE_URL:-http://llm:8000/v1}
       QWEN_MODEL: ${QWEN_MODEL:-Qwen/Qwen3-8B}

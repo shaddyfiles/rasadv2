@@ -93,11 +93,12 @@ The built UI is already in `backend/static`. To change the UI:
 cd frontend && npm install && npm run build      # writes backend/static (app.js, app.css, fonts)
 ```
 
-Tests (from the repo root): `pytest -q`. There are 10 end-to-end API tests.
+Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 14 end-to-end API tests.
 
 ## Run with PostgreSQL + PostGIS
 
 ```bash
+export POSTGRES_PASSWORD=choose-one              # required; compose refuses to start without it
 docker compose up -d --build                     # PostGIS 16-3.4 + API/UI on http://localhost:8000
 docker compose --profile llm up -d               # adds Qwen3-8B on vLLM (GPU host)
 ```
@@ -175,7 +176,7 @@ export QWEN_BASE_URL=http://localhost:8000/v1 QWEN_MODEL=Qwen/Qwen3-8B
 | POST | `/api/command`, `/api/command/execute` | Natural-language command; run a confirmed action |
 | POST | `/api/reset` | Re-seed the synthetic sector |
 
-When `RASAD_API_KEY` is set, every write needs the header `X-API-Key`.
+When `RASAD_API_KEY` is set, every write, `/api/command` and `/api/alerts/brief` need the header `X-API-Key`. Set it for any shared deployment: with no key, anyone who can reach the server can edit data or call `/api/reset`. CORS is off unless `RASAD_CORS_ORIGIN` is set.
 
 ## Files
 
@@ -192,7 +193,7 @@ All data is synthetic. Sector Himgiri, its posts, depots and passes are fictiona
 ## Verified here, and what isn't
 
 Verified:
-- All 10 API tests pass on SQLite with the scikit-learn fallback.
+- All 14 API tests pass on SQLite with the scikit-learn fallback.
 - The React website was built with esbuild and every page was clicked through in a headless browser at desktop and phone widths, with no script errors, including the Predictions page.
 
 Not reachable from the build environment, so test before a demo:

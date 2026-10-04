@@ -44,7 +44,7 @@ class QuantileModel:
         X, y = np.asarray(X, float), np.asarray(y, float)
         if xgb is not None:
             self.m = xgb.XGBRegressor(objective="reg:quantileerror", quantile_alpha=np.array(QUANTILES),
-                                      n_estimators=250, max_depth=3, learning_rate=0.06, subsample=0.9)
+                                      n_estimators=120, max_depth=3, learning_rate=0.12, subsample=0.9, n_jobs=1)
             self.m.fit(X, y)
         else:
             from sklearn.ensemble import GradientBoostingRegressor

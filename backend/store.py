@@ -210,13 +210,16 @@ def dispatch(db, plan_id, trip_ids=None):
     if p["status"] != "proposed":
         raise ValueError(f"plan already {p['status']}")
     res = jload(p["result"])
-    created = []
+    sent = set(res.get("dispatched_trips", []))
+    created, skipped = [], []
     for t in res["trips"]:
-        if trip_ids and t["id"] not in trip_ids:
+        if (trip_ids and t["id"] not in trip_ids) or t["id"] in sent:
             continue
         v = db.q("SELECT status FROM vehicles WHERE id = ?", (t["vehicle_id"],), one=True)
         if not v or v["status"] != "idle":
+            skipped.append(t["id"])
             continue
+        sent.add(t["id"])
         for d in t["drops"]:
             for l in d["lines"]:
                 db.x("UPDATE inventory SET qty = CASE WHEN qty > ? THEN qty - ? ELSE 0 END, updated_at = ? WHERE base_id = ? AND item_id = ?",
@@ -225,7 +228,12 @@ def dispatch(db, plan_id, trip_ids=None):
         row = db.x("INSERT INTO shipments(plan_id, vehicle_id, status, created_at, eta, trip) VALUES (?,?, 'in_transit', ?,?,?) RETURNING id",
                    (plan_id, t["vehicle_id"], now(), t["drops"][-1]["eta"], json.dumps(t)))
         created.append(row["id"])
-    db.x("UPDATE plans SET status = 'dispatched' WHERE id = ?", (plan_id,))
+    if skipped and not created:
+        db.rollback()
+        raise ValueError(f"vehicles are busy for trips {skipped}")
+    res["dispatched_trips"] = sorted(sent)
+    # a plan stays open while trips with busy vehicles are still unsent, so they can be dispatched later
+    db.x("UPDATE plans SET status = ?, result = ? WHERE id = ?", ("proposed" if skipped else "dispatched", json.dumps(res), plan_id))
     db.commit()
     return created
 
