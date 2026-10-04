@@ -339,3 +339,16 @@ def test_readers_never_see_a_half_reset_sector(client):
     for t in readers:
         t.join(120)
     assert resets == [200, 200, 200] and not errors, (resets, errors[:5])
+
+
+def test_api_recovers_after_the_database_drops_its_connections(client):
+    """Docker regression: after PostgreSQL restarted, every request failed, because each thread kept its dead connection."""
+    import psycopg2
+    url = _pg_only()
+    assert client.get("/api/bases").status_code == 200
+    admin = psycopg2.connect(url)
+    admin.autocommit = True
+    admin.cursor().execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                           "WHERE datname = current_database() AND pid <> pg_backend_pid()")
+    admin.close()
+    assert [client.get("/api/bases").status_code for _ in range(3)] == [200, 200, 200]

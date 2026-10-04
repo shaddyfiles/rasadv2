@@ -74,6 +74,8 @@ class DB:
     @property
     def con(self):
         c = getattr(self._local, "c", None)
+        if c is not None and self.pg and c.closed:     # the server went away: open a new connection
+            c = None
         if c is None:
             if self.pg:
                 import psycopg2
@@ -88,16 +90,45 @@ class DB:
     def _sql(self, sql):
         return sql.replace("?", "%s") if self.pg else sql
 
+    def _run(self, sql, params):
+        """Execute one statement. If PostgreSQL restarted since this thread's connection was opened, the first
+        statement of a transaction fails on the dead connection; nothing has happened in that transaction yet,
+        so it is safe to reconnect and run it once more. A failure later in a transaction is raised as usual."""
+        fresh = not self.in_transaction()
+        try:
+            cur = self.con.cursor()
+            cur.execute(self._sql(sql), tuple(params))
+            return cur
+        except Exception as e:  # noqa: BLE001
+            if not (self.pg and fresh and self._dead(e)):
+                raise
+            self._drop()
+            cur = self.con.cursor()
+            cur.execute(self._sql(sql), tuple(params))
+            return cur
+
+    def _dead(self, e):
+        import psycopg2
+        c = getattr(self._local, "c", None)
+        return isinstance(e, (psycopg2.OperationalError, psycopg2.InterfaceError)) and (c is None or c.closed)
+
+    def _drop(self):
+        c = getattr(self._local, "c", None)
+        self._local.c = None
+        if c is not None:
+            try:
+                c.close()
+            except Exception:  # noqa: BLE001
+                pass
+
     def q(self, sql, params=(), one=False):
-        cur = self.con.cursor()
-        cur.execute(self._sql(sql), tuple(params))
+        cur = self._run(sql, params)
         rows = [dict(r) for r in cur.fetchall()] if cur.description else []
         cur.close()
         return (rows[0] if rows else None) if one else rows
 
     def x(self, sql, params=()):
-        cur = self.con.cursor()
-        cur.execute(self._sql(sql), tuple(params))
+        cur = self._run(sql, params)
         row = cur.fetchone() if cur.description else None
         cur.close()
         return dict(row) if row is not None else None
@@ -116,7 +147,7 @@ class DB:
 
     def in_transaction(self):
         c = getattr(self._local, "c", None)
-        if c is None:
+        if c is None or (self.pg and c.closed):
             return False
         if self.pg:
             import psycopg2.extensions as ext
@@ -127,8 +158,15 @@ class DB:
         """Close this thread's open transaction. Writes commit explicitly, so anything still open is a read (or a
         failed write) and is rolled back. On PostgreSQL an open read transaction holds table locks until it ends,
         which blocks schema changes from another worker, and a failed one refuses every later query."""
+        c = getattr(self._local, "c", None)
+        if c is not None and self.pg and c.closed:
+            self._drop()
+            return
         if self.in_transaction():
-            self.rollback()
+            try:
+                self.rollback()
+            except Exception:  # noqa: BLE001  - the connection died mid-request: start afresh next time
+                self._drop()
 
     @contextmanager
     def boot_lock(self):

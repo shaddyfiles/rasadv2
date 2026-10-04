@@ -13,6 +13,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U rasad"]
       interval: 5s
       retries: 12
+    restart: unless-stopped            # come back with the API after a reboot or a Docker restart
 
   api:
     build: .
