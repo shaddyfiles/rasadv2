@@ -232,10 +232,11 @@ All data is synthetic unless real weather is switched on (below). Sector Himgiri
 ## Verified here, and what isn't
 
 Verified:
-- All 21 API tests pass on SQLite with the scikit-learn fallback.
-- The React website was built with esbuild and every page was clicked through in a headless browser at desktop and phone widths, with no script errors, including the Predictions page.
+- All 21 API tests pass on SQLite with XGBoost 3.4 (and the scikit-learn fallback before that).
+- All 21 API tests pass on **PostgreSQL 16.14 + PostGIS 3.6.2** (portable Windows build). Geometry is stored as `geometry(Point/LineString, 4326)` with GiST indexes, and the map, nearby search (`ST_DWithin`, `ST_Distance`), planning, dispatch, delivery, what-if, assistant commands and reset all work there. To repeat: `RASAD_TEST_DATABASE_URL=postgresql://user@localhost:5432/rasad_test pytest -q` against an empty database.
+- The React website was built with esbuild and every page was clicked through in a browser, with no script errors.
+- Real weather from Open-Meteo was downloaded and seeded in both live and replay modes.
 
-Not reachable from the build environment, so test before a demo:
-- The PostGIS path, though the code and Docker files are written for it.
-- XGBoost itself.
+Not yet verified:
+- The Docker image and `docker-compose.yml` (the PostGIS code path they use is verified above).
 - A live Qwen3-8B server.

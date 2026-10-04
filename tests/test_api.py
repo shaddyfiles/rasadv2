@@ -1,4 +1,8 @@
-"""End-to-end API tests on a throwaway SQLite database.  Run from the repo root: pytest -q"""
+"""End-to-end API tests on a throwaway SQLite database.  Run from the repo root: pytest -q
+
+To run them on PostgreSQL + PostGIS instead, point RASAD_TEST_DATABASE_URL at an empty database you can throw away:
+    RASAD_TEST_DATABASE_URL=postgresql://user@localhost:5432/rasad_test pytest -q
+"""
 import os
 import sys
 import tempfile
@@ -10,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 @pytest.fixture(scope="module")
 def client():
-    os.environ["DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp()}/test.db"
+    os.environ["DATABASE_URL"] = os.environ.get("RASAD_TEST_DATABASE_URL") or f"sqlite:///{tempfile.mkdtemp()}/test.db"
     os.environ["RASAD_GA_GENS"] = "30"
     import app as rasad_app
     return rasad_app.app.test_client()
