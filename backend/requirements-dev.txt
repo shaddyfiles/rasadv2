@@ -1,2 +1,3 @@
 -r requirements.txt
 pytest>=8.0
+pyvrp>=0.10          # only for benchmarks/pyvrp_vs_ga.py

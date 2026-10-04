@@ -311,7 +311,8 @@ def genetic(ctx, seed_genes, pop_size, gens, rng):
 
 
 # ------------------------------------------------------------------ public entry point
-def plan(snap, weights, cfg, seed=0):
+def context(snap, weights, cfg, seed=0):
+    """Everything the solvers share for one sector: the supply lots, the vehicles that can carry each, the road router."""
     W = {"speed": 1.0, "safety": 1.0, "economy": 1.0, **(weights or {})}
     router = Router(snap["roads"], W["safety"], cfg.ACO_ANTS, cfg.ACO_ITERS, seed=seed + 11)
     V = {v["id"]: v for v in snap["vehicles"] if v["status"] == "idle"}
@@ -322,7 +323,12 @@ def plan(snap, weights, cfg, seed=0):
     opts = [[vid for vid, v in V.items() if (v["type"] == "truck" and v["home"] in lot["srcs"]) or
              (v["type"] == "heli" and snap["bases"][lot["to"]]["kind"] == "post" and lot["kg"] <= cap_of(v, snap, [lot["to"]], cfg) + 1e-9)]
             for lot in lots]
-    ctx = {"lots": lots, "opts": opts, "V": V, "router": router, "snap": snap, "W": W, "cfg": cfg}
+    return {"lots": lots, "opts": opts, "V": V, "router": router, "snap": snap, "W": W, "cfg": cfg}
+
+
+def plan(snap, weights, cfg, seed=0):
+    ctx = context(snap, weights, cfg, seed)
+    W, router, lots, V = ctx["W"], ctx["router"], ctx["lots"], ctx["V"]
     base_genes = baseline(ctx)
     base_m = evaluate(base_genes, ctx)
     best, hist = genetic(ctx, base_genes, cfg.GA_POP, cfg.GA_GENS, random.Random(seed + 101))

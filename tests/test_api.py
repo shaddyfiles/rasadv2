@@ -240,3 +240,16 @@ def test_helicopter_payload_falls_with_altitude(client, monkeypatch):
     monkeypatch.setattr(cfg, "HELI_DERATE_PER_KM", 0.0)                          # no derating: the full rating is available
     flat = client.post("/api/plan", json={}).get_json()
     assert all(t["cap_kg"] == 1200 for t in flat["trips"] if t["type"] == "heli")
+
+
+def test_pyvrp_benchmark_plan_is_a_valid_rasad_plan(client):
+    """The benchmark turns a PyVRP solution into a Rasad plan; with trucks capped at the bridge limit it must break no hard limit."""
+    pytest.importorskip("pyvrp")
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "benchmarks"))
+    import pyvrp_vs_ga as bench
+    snap = bench.store.snapshot(bench.rasad.db)
+    ctx = bench.opt.context(snap, None, bench.rasad.cfg, seed=0)
+    genes, _ = bench.pyvrp_genes(ctx, seconds=1, cap_trucks=True)
+    assert len(genes) == len(ctx["lots"])
+    m = bench.opt.evaluate(genes, ctx)
+    assert m["penalty"] == 0 and m["deferred"] < len(genes)
