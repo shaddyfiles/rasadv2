@@ -94,7 +94,7 @@ The built UI is already in `backend/static`. To change the UI:
 cd frontend && npm install && npm run build      # writes backend/static (app.js, app.css, fonts)
 ```
 
-Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 17 end-to-end API tests.
+Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 20 end-to-end API tests.
 
 ## Run with PostgreSQL + PostGIS
 
@@ -110,6 +110,27 @@ The app runs `CREATE EXTENSION postgis`, creates the tables with `geometry(Point
 - `ST_AsGeoJSON` feeds the map.
 - `ST_GeomFromGeoJSON` writes geometry.
 - `ST_DWithin` and `ST_Distance` on geography answer `GET /api/bases/nearby?lat=&lon=&km=`.
+
+## Real weather
+
+The weather that drives road closures can be real, from [Open-Meteo](https://open-meteo.com/) (free, no key): daily snowfall, mean temperature (downscaled to each zone's altitude) and peak wind at each of the four weather zones, taken at the zones' real coordinates.
+
+```bash
+RASAD_REAL_DATA=live   python app.py    # real weather up to today and the real 14-day forecast
+RASAD_REAL_DATA=replay python app.py    # a real winter replayed as if it were today (day 0 = 2026-03-08, four days before a real snowfall peak)
+RASAD_REAL_DATA=replay:2026-01-15 python app.py   # another start day
+```
+
+Set it before the first start, or call `POST /api/reset` afterwards. The download is cached in `backend/data/weather_real.json` (the committed copy is the 2026-03-08 replay, so that mode works offline). If the download fails, Rasad falls back to synthetic weather and `/api/health` says so (`weather_source`).
+
+What is real and what is not:
+- Real: the weather. The Predictions page shows which source is in use.
+- Not real: the sector, posts, roads and consumption, and the road closures the model learns from. Those are still generated from the weather by a hidden snow rule. In real-weather mode the rule reads snow on a scale where 10 cm counts like 40 cm of the synthetic storms, because ERA5 snowfall in this cold desert is light. That scale is an assumption, so the closure model's accuracy there measures how well it learns the rule, not how well it predicts real closures.
+- `live` mode in summer or autumn is calm, so almost no roads close. Use `replay` for a demo.
+
+## Helicopter payload at altitude
+
+A helicopter's lift falls with altitude. The planner uses the highest of its take-off and landing points: full rating up to 3,000 m, then 18% of the rating lost per 1,000 m, never below 30%. At a 5,000 m post a 1,200 kg helicopter lifts about 770 kg. This is a planning assumption, not an aircraft rating: change it with `RASAD_HELI_DERATE_FROM_M`, `RASAD_HELI_DERATE_PER_KM` and `RASAD_HELI_DERATE_FLOOR`. Each helicopter trip shows its derated limit and says so in its reason.
 
 ## Connect Qwen3-8B
 
@@ -191,12 +212,12 @@ docs/      screenshots of every page
 Dockerfile  docker-compose.yml
 ```
 
-All data is synthetic. Sector Himgiri, its posts, depots and passes are fictional.
+All data is synthetic unless real weather is switched on (below). Sector Himgiri, its posts, depots and passes are fictional.
 
 ## Verified here, and what isn't
 
 Verified:
-- All 17 API tests pass on SQLite with the scikit-learn fallback.
+- All 20 API tests pass on SQLite with the scikit-learn fallback.
 - The React website was built with esbuild and every page was clicked through in a headless browser at desktop and phone widths, with no script errors, including the Predictions page.
 
 Not reachable from the build environment, so test before a demo:

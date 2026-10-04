@@ -122,10 +122,19 @@ def index(_id=None):
 
 
 # ------------------------------------------------------------------ system
+def weather_source():
+    try:
+        row = db.q("SELECT value FROM meta WHERE key = 'weather_source'", one=True)
+    except Exception:       # a database seeded before this table existed
+        db.rollback()
+        return "synthetic"
+    return row["value"] if row else "synthetic"
+
+
 @app.get("/api/health")
 def health():
     """Database, forecasting engine and Qwen3 status."""
-    return ok({"today": datetime.date.today().isoformat(), "db": db.kind, "forecast_engine": fc.ENGINE, "llm": assistant.status(cfg), "api_key_required": bool(cfg.API_KEY)})
+    return ok({"today": datetime.date.today().isoformat(), "db": db.kind, "forecast_engine": fc.ENGINE, "llm": assistant.status(cfg), "api_key_required": bool(cfg.API_KEY), "weather_source": weather_source()})
 
 
 @app.get("/api/map")
@@ -226,7 +235,7 @@ def forecast_metrics():
 def predictions():
     """Chance of running out (Monte Carlo), 7-day road closure outlook (classifier), model accuracy."""
     snap = store.snapshot(db)
-    return ok({"stockout": predict.stockout_risk(snap), "roads": predict.road_outlook(db, 7), "demand": fc.metrics(db)})
+    return ok({"stockout": predict.stockout_risk(snap), "roads": predict.road_outlook(db, 7), "demand": fc.metrics(db), "weather_source": weather_source()})
 
 
 @app.post("/api/predict/roads/refresh")

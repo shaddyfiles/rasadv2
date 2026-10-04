@@ -22,6 +22,21 @@ DRIVE_HOURS = 10        # driving hours per day in the mountains
 HELI_KMH = 180
 
 
+def heli_derate(alt_m, cfg):
+    """Share of the rated payload a helicopter can lift at this altitude."""
+    over = max(0.0, alt_m - cfg.HELI_DERATE_FROM_M) / 1000
+    return max(cfg.HELI_DERATE_FLOOR, 1 - cfg.HELI_DERATE_PER_KM * over)
+
+
+def cap_of(veh, snap, stops, cfg):
+    """Payload limit of a vehicle for a sortie: a helicopter's depends on the highest place it has to take off from
+    or land at; a truck's is its rating."""
+    if veh["type"] != "heli":
+        return veh["cap_kg"]
+    alts = [snap["bases"][veh["home"]]["alt_m"]] + [snap["bases"][s]["alt_m"] for s in stops]
+    return veh["cap_kg"] * heli_derate(max(alts), cfg)
+
+
 def _day(offset):
     return (date.today() + timedelta(days=math.floor(offset))).isoformat()
 
@@ -96,12 +111,12 @@ class Router:
 
 
 # ------------------------------------------------------------------ requirements
-def requirements(snap, router):
+def requirements(snap, router, urgent_kg=900):
     lots = []
 
     def add(to, item, q, deadline, urgent, src, why, lead=1.0):
         kg = snap["items"][item]["kg_per_unit"]
-        size = 900 if urgent else 2000
+        size = urgent_kg if urgent else 2000
         n = max(1, math.ceil(q * kg / size))
         for k in range(n):
             qq = round(q / n, 1)
@@ -181,7 +196,8 @@ def evaluate(genes, ctx, build=False):
             use[(veh["home"], lot["item"])] = use.get((veh["home"], lot["item"]), 0) + lot["q"]
         stops = sorted(stops.values(), key=lambda s: s["key"])
         kg = sum(l["kg"] for l, _ in lst)
-        pen += max(0.0, kg - veh["cap_kg"]) / 2
+        cap = cap_of(veh, snap, [s["to"] for s in stops], ctx["cfg"])
+        pen += max(0.0, kg - cap) / 2
         t, here, rem, legs, rr = 0.0, veh["home"], kg, [], 0.0
         for s in stops:
             if veh["type"] == "heli":
@@ -210,9 +226,9 @@ def evaluate(genes, ctx, build=False):
             pen += 40 * (len(stops) - 2)
         transit += t
         risk += rr
-        econ += (2.5 if veh["type"] == "heli" else 1.0) + 0.8 * (1 - min(1.0, kg / veh["cap_kg"]))
+        econ += (2.5 if veh["type"] == "heli" else 1.0) + 0.8 * (1 - min(1.0, kg / cap))
         if build:
-            trips.append({"vehicle": veh, "kg": kg, "days": t, "stops": stops, "legs": legs, "risk": rr})
+            trips.append({"vehicle": veh, "kg": kg, "cap": cap, "days": t, "stops": stops, "legs": legs, "risk": rr})
     for (home, item), q in use.items():
         have = snap["bases"][home]["stock"][item]
         if q > have:
@@ -235,7 +251,7 @@ def baseline(ctx):
         for vid in prefer:
             veh = V[vid]
             r = ctx["router"].route(veh["home"], lot["to"]) if veh["type"] == "truck" else True
-            cap = min(veh["cap_kg"], r["max_kg"]) if veh["type"] == "truck" and r else veh["cap_kg"]
+            cap = min(veh["cap_kg"], r["max_kg"]) if veh["type"] == "truck" and r else cap_of(veh, ctx["snap"], [lot["to"]], ctx["cfg"])
             k = (veh["home"], lot["item"])
             if not r or load.get(vid, 0) + lot["kg"] > cap or dest.get(vid, lot["to"]) != lot["to"] or \
                     ctx["snap"]["bases"][veh["home"]]["stock"][lot["item"]] - used.get(k, 0) < lot["q"]:
@@ -298,11 +314,15 @@ def genetic(ctx, seed_genes, pop_size, gens, rng):
 def plan(snap, weights, cfg, seed=0):
     W = {"speed": 1.0, "safety": 1.0, "economy": 1.0, **(weights or {})}
     router = Router(snap["roads"], W["safety"], cfg.ACO_ANTS, cfg.ACO_ITERS, seed=seed + 11)
-    lots = requirements(snap, router)
     V = {v["id"]: v for v in snap["vehicles"] if v["status"] == "idle"}
+    # an urgent lot must be small enough for a helicopter at the highest post, or it could never be flown in
+    top = max((b["alt_m"] for b in snap["bases"].values() if b["kind"] == "post"), default=0)
+    rated = max((v["cap_kg"] for v in V.values() if v["type"] == "heli"), default=900)
+    lots = requirements(snap, router, urgent_kg=min(900, math.floor(rated * heli_derate(top, cfg) / 10) * 10))
     opts = [[vid for vid, v in V.items() if (v["type"] == "truck" and v["home"] in lot["srcs"]) or
-             (v["type"] == "heli" and snap["bases"][lot["to"]]["kind"] == "post")] for lot in lots]
-    ctx = {"lots": lots, "opts": opts, "V": V, "router": router, "snap": snap, "W": W}
+             (v["type"] == "heli" and snap["bases"][lot["to"]]["kind"] == "post" and lot["kg"] <= cap_of(v, snap, [lot["to"]], cfg) + 1e-9)]
+            for lot in lots]
+    ctx = {"lots": lots, "opts": opts, "V": V, "router": router, "snap": snap, "W": W, "cfg": cfg}
     base_genes = baseline(ctx)
     base_m = evaluate(base_genes, ctx)
     best, hist = genetic(ctx, base_genes, cfg.GA_POP, cfg.GA_GENS, random.Random(seed + 101))
@@ -327,12 +347,14 @@ def plan(snap, weights, cfg, seed=0):
         why = first["why"] + "."
         if veh["type"] == "heli":
             why += " By road it would arrive after the stock runs out, so it goes by helicopter." if urgent else " A helicopter is faster and one was free."
+            if tp["cap"] < veh["cap_kg"] - 1:
+                why += f" The thin air at this altitude cuts its lift from {veh['cap_kg']:,.0f} kg to {tp['cap']:,.0f} kg."
         if len(drops) > 1:
             why += " One vehicle makes both drops." if len(drops) == 2 else f" One vehicle makes all {len(drops)} drops."
         if any(road_names.get(r) and next(x for x in snap["roads"] if x["id"] == r)["exposure"] >= 0.5 for l in tp["legs"] for r in l.get("roads", [])):
             why += " The route crosses a track under observation."
         out.append({"id": len(out) + 1, "vehicle_id": veh["id"], "vehicle": veh["name"], "type": veh["type"], "from": veh["home"],
-                    "from_name": names[veh["home"]], "kg": round(tp["kg"]), "fill_pct": round(100 * tp["kg"] / veh["cap_kg"]),
+                    "from_name": names[veh["home"]], "kg": round(tp["kg"]), "cap_kg": round(tp["cap"]), "fill_pct": round(100 * tp["kg"] / tp["cap"]),
                     "days": round(tp["days"], 2), "priority": "flash" if urgent or late else "routine", "late": late,
                     "legs": tp["legs"], "route": " → ".join(dict.fromkeys(road_names[r] for l in tp["legs"] for r in l.get("roads", []))) or "Direct flight",
                     "drops": drops, "why": why})

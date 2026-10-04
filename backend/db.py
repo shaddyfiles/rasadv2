@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS roads (
   exposure {REAL} DEFAULT 0, max_kg {REAL}, status TEXT DEFAULT 'open', risk {REAL} DEFAULT 0,
   zone TEXT, risk_source TEXT DEFAULT 'model', geom {LINE} NOT NULL
 );
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS weather (
   day TEXT NOT NULL, zone TEXT NOT NULL, snow_cm {REAL}, temp_c {REAL}, wind_kmh {REAL}, kind TEXT,
   PRIMARY KEY (day, zone)
@@ -113,7 +114,7 @@ class DB:
 
     # ---------------------------------------------------------- schema
     def create_schema(self, drop=False):
-        tables = ["road_history", "weather", "shipments", "plans", "vehicles", "roads", "consumption", "inventory", "bases", "items"]
+        tables = ["meta", "road_history", "weather", "shipments", "plans", "vehicles", "roads", "consumption", "inventory", "bases", "items"]
         cur = self.con.cursor()
         if drop:
             for t in tables:
