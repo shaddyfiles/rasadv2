@@ -102,6 +102,9 @@ export default function Predictions() {
               <tr><td>Last week's average (no model)</td><td className="n">{fmt(dm.by_model.naive * 100, 1)}%</td></tr>
             </tbody>
           </table>
+          {dm.walk_forward?.folds?.length > 0 && (
+            <p className="note"><strong>A stricter check.</strong> The blend&rsquo;s weights above were set on those same {dm.holdout_days} days, so its error there is a little flattering. Testing {dm.walk_forward.folds.length} earlier {dm.holdout_days}-day windows in turn, each trained only on days before it and blended 50/50 with no tuning, the error is {fmt(dm.walk_forward.wape.ens * 100, 1)}% (last week&rsquo;s average: {fmt(dm.walk_forward.wape.naive * 100, 1)}%). It ranged from {fmt(Math.min(...dm.walk_forward.folds.map(f => f.ens)) * 100, 1)}% to {fmt(Math.max(...dm.walk_forward.folds.map(f => f.ens)) * 100, 1)}% across the windows. All of this is on synthetic data.</p>
+          )}
           <p className="note">The boosted trees' own 10–90% range caught {fmt(dm.quantile_coverage * 100)}% of actual days, short of the 80% it should, so the range Rasad shows is reset from the blend's recent errors instead.</p>
           <h3 className="minor">What drives daily use</h3>
           <Shares rows={dm.importance} />

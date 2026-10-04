@@ -1,6 +1,6 @@
 # Rasad: predictive logistics for forward posts
 
-SIH 26251 (Indian Army, DSSC): assured logistics to forward formations. A seven-page React website on a Flask API, with demand forecasting, road-closure prediction, stock-out simulation, a GA + ACO planner and a Qwen3-8B assistant.
+SIH 26251 (Indian Army, DSSC): assured logistics to forward formations. A eight-page React website on a Flask API, with demand forecasting, road-closure prediction, stock-out simulation, a GA + ACO planner and a Qwen3-8B assistant.
 
 ```
 [ React website ]  seven pages: Home, Bases, Predictions, Plan, Movements, Roads, Ask Rasad
@@ -17,7 +17,7 @@ SIH 26251 (Indian Army, DSSC): assured logistics to forward formations. A seven-
 
 ## The website
 
-Seven pages, each with its own address, so they can be bookmarked and shared:
+Eight pages, each with its own address, so they can be bookmarked and shared:
 
 | Page | Address | What it is for |
 |---|---|---|
@@ -26,6 +26,7 @@ Seven pages, each with its own address, so they can be bookmarked and shared:
 | Base | `/bases/P4` | Stock register: on hand, daily use, how long it lasts, run-out date, loads on the way. Correct a figure in place, record today's usage, change troop strength. Shows a chart of the last month and the next two weeks for the chosen item. |
 | Predictions | `/predictions` | Chance each post runs out of each item within 3 days and a week, with the likely run-out window (500 simulations each). A seven-day grid of each road's chance of closing. How far to trust both models: hold-out error against simpler models, and what drives each prediction. |
 | Plan | `/plan` | Choose what matters (arrive sooner, avoid risky roads, use fewer vehicles) and work out a plan. Each trip shows its drops, dates and the reason in plain words; the map shows the route. Send all trips. "How this plan was found" shows the genetic algorithm's progress against the rule-based plan. |
+| What if | `/whatif` | Pick a disruption (a pass closes, both passes close, helicopters grounded, a troop surge) and see what it does. For each one Rasad shows the expected stock-outs in the next 7 days if nothing is sent, if the plan you already had is run with the loads that can no longer go removed, and if Rasad plans again. It works on a copy, so nothing real changes. |
 | Movements | `/movements` | Loads on the way, with Mark delivered, and the delivery history. |
 | Roads | `/roads` | The road register: close or reopen a road. Chances of closure come from the road model; overwrite one from an engineer report, or take them from the model again. Click a road on the map to find it in the table. |
 | Ask Rasad | `/assistant` | Ask questions or give instructions in plain words. Changes wait for your Confirm. Also writes a short alert briefing. |
@@ -93,7 +94,7 @@ The built UI is already in `backend/static`. To change the UI:
 cd frontend && npm install && npm run build      # writes backend/static (app.js, app.css, fonts)
 ```
 
-Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 14 end-to-end API tests.
+Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 17 end-to-end API tests.
 
 ## Run with PostgreSQL + PostGIS
 
@@ -132,6 +133,7 @@ export QWEN_BASE_URL=http://localhost:8000/v1 QWEN_MODEL=Qwen/Qwen3-8B
 - The two are blended with weights set by each model's error on the last 14 days, which it was not trained on.
 - **Conformal range:** the trees' own 10–90% band covered only about 61–68% of hold-out days, so Rasad replaces it with the 10th and 90th percentiles of the blend's hold-out errors, widening slowly with horizon.
 - Models retrain automatically when new consumption arrives.
+- A stricter check (`walk_forward` in `/api/forecast/metrics`): three earlier 14-day windows, each trained only on days before it and blended 50/50 with no tuning on the window. Blend error about 12.6% against 25.3% for last week's average.
 - Hold-out error (WAPE) in the seeded sector: blend about 12%, trees about 13%, regression about 12%, last week's average about 23–26%.
 
 **Road-closure prediction:**
@@ -169,6 +171,7 @@ export QWEN_BASE_URL=http://localhost:8000/v1 QWEN_MODEL=Qwen/Qwen3-8B
 | POST | `/api/predict/roads/refresh` | Reset every road's risk from the closure model |
 | GET | `/api/hazards` | Map layers for 7 days: closure chance per road, weather per zone, avalanche danger, observation, bridge limits, passes |
 | GET | `/api/weather` | Last 7 days of weather and the 14-day forecast, by zone |
+| GET / POST | `/api/whatif` | Ready-made scenarios; run one on a copy of the sector (`{"scenario": "pass_closed"}` or `{"close": [...], "ground_helis": true, "surge": {"base": "P2", "pct": 60}}`). Changes nothing. |
 | POST | `/api/plan` | Run GA + ACO with `{"weights": {...}}` |
 | POST | `/api/plan/<id>/dispatch` | Dispatch trips |
 | GET / POST | `/api/shipments`, `/api/shipments/<id>/deliver` | In transit; confirm delivery |
@@ -176,12 +179,12 @@ export QWEN_BASE_URL=http://localhost:8000/v1 QWEN_MODEL=Qwen/Qwen3-8B
 | POST | `/api/command`, `/api/command/execute` | Natural-language command; run a confirmed action |
 | POST | `/api/reset` | Re-seed the synthetic sector |
 
-When `RASAD_API_KEY` is set, every write, `/api/command` and `/api/alerts/brief` need the header `X-API-Key`. Set it for any shared deployment: with no key, anyone who can reach the server can edit data or call `/api/reset`. CORS is off unless `RASAD_CORS_ORIGIN` is set.
+When `RASAD_API_KEY` is set, every write, `/api/command`, `/api/alerts/brief` and `/api/whatif` need the header `X-API-Key`. Set it for any shared deployment: with no key, anyone who can reach the server can edit data or call `/api/reset`. CORS is off unless `RASAD_CORS_ORIGIN` is set.
 
 ## Files
 
 ```
-backend/   app.py  assistant.py  forecast.py  predict.py  optimizer.py  store.py  db.py  seed.py  config.py  static/ (built UI)
+backend/   app.py  scenarios.py  assistant.py  forecast.py  predict.py  optimizer.py  store.py  db.py  seed.py  config.py  static/ (built UI)
 frontend/  package.json  build.mjs  build-demo.mjs  demo/capture.py  dist-demo/rasad-demo.html  index.html  public/fonts/  src/{main,App,lib,MapView,Chart}.jsx  src/demo.js  src/pages/*.jsx  src/styles.css
 tests/     test_api.py
 docs/      screenshots of every page
@@ -193,7 +196,7 @@ All data is synthetic. Sector Himgiri, its posts, depots and passes are fictiona
 ## Verified here, and what isn't
 
 Verified:
-- All 14 API tests pass on SQLite with the scikit-learn fallback.
+- All 17 API tests pass on SQLite with the scikit-learn fallback.
 - The React website was built with esbuild and every page was clicked through in a headless browser at desktop and phone widths, with no script errors, including the Predictions page.
 
 Not reachable from the build environment, so test before a demo:

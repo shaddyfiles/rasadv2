@@ -64,8 +64,11 @@ for name, w in VARIANTS.items():
     d = post(f"/plan/{p['id']}/dispatch")
     plans[name] = {"plan": {**p, "status": "proposed"}, "dispatch": d, "after": views()}
 
+post("/reset")
+whatif = {"list": get("/whatif"), "results": {x["id"]: post("/whatif", {"scenario": x["id"]}) for x in get("/whatif")}}
+
 data = {"recorded": state["/health"]["today"], "state": state, "forecasts": forecasts, "brief": brief,
-        "commands": commands, "plans": plans}
+        "commands": commands, "plans": plans, "whatif": whatif}
 path = os.path.join(HERE, "demo-data.json")
 with open(path, "w") as f:
     json.dump(data, f, separators=(",", ":"))
