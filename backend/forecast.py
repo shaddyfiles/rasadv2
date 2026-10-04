@@ -164,6 +164,51 @@ def calibration(db):
     return res
 
 
+def walk_forward(db, folds=3):
+    """Rolling-origin check: for each of the last `folds` 14-day windows, train only on days before it and score the
+    window. The two models are blended 50/50 with no tuning on the window, so this is an honest out-of-sample error.
+    Cached until new data arrives."""
+    key = ("wf", _stamp(db), folds)
+    if key in _cache:
+        return _cache[key]
+    allrows = [r for r in history(db) if r["strength"]]
+    kg = {i["id"]: i["kg_per_unit"] for i in db.q("SELECT id, kg_per_unit FROM items")}
+    out, tot = [], {"ml": 0.0, "lin": 0.0, "ens": 0.0, "naive": 0.0, "y": 0.0}
+    for k in range(folds):
+        lo = (date.today() - timedelta(days=HOLDOUT * (k + 1))).isoformat()
+        hi = (date.today() - timedelta(days=HOLDOUT * k)).isoformat()
+        models = train(db, until=lo)
+        before = [r for r in allrows if r["day"] < lo]
+        last7 = {}
+        for r in reversed(before):
+            v = last7.setdefault((r["base_id"], r["item_id"]), [])
+            if len(v) < 7:
+                v.append(r["qty"])
+        e = {"ml": 0.0, "lin": 0.0, "ens": 0.0, "naive": 0.0, "y": 0.0}
+        for item, m in models.items():
+            if item == "spares":      # intermittent, would swamp a weighted error
+                continue
+            rs = [r for r in allrows if r["item_id"] == item and lo <= r["day"] < hi]
+            if not rs:
+                continue
+            S = np.array([r["strength"] for r in rs], float)
+            y = np.array([r["qty"] for r in rs], float)
+            ml = m["ml"].predict([_x(r["temp_c"], r["alt_m"], r["tempo"]) for r in rs])[:, 1] * S
+            lin = m["lin"].predict([_lin_x(r["temp_c"], r["tempo"]) for r in rs]) * S
+            naive = np.array([np.mean(last7.get((r["base_id"], item), [0]) or [0]) for r in rs])
+            w = kg[item]
+            for name, p in (("ml", ml), ("lin", lin), ("ens", 0.5 * ml + 0.5 * lin), ("naive", naive)):
+                e[name] += np.abs(y - p).sum() * w
+            e["y"] += y.sum() * w
+        if e["y"] > 0:
+            out.append({"from": lo, "to": hi, **{n: e[n] / e["y"] for n in ("ml", "lin", "ens", "naive")}})
+            for n in tot:
+                tot[n] += e[n]
+    res = {"folds": out, "wape": {n: tot[n] / tot["y"] for n in ("ml", "lin", "ens", "naive")} if tot["y"] else {}}
+    _cache[key] = res
+    return res
+
+
 def forecast(db, base, item, days=HORIZON, models=None):
     """Daily blended forecast with a calibrated P10-P90 range. Temperature cools 0.2 °C a day (early winter)."""
     models = models or train(db)
@@ -201,5 +246,5 @@ def cover(stock, fc, inbound=()):
 def metrics(db):
     c = calibration(db)
     return {"engine": c["engine"], "holdout_days": c["holdout_days"], "wape": c["wape"].get("ens"),
-            "naive_wape": c["wape"].get("naive"), "by_model": c["wape"], "quantile_coverage": c["quantile_coverage"],
+            "naive_wape": c["wape"].get("naive"), "by_model": c["wape"], "walk_forward": walk_forward(db), "quantile_coverage": c["quantile_coverage"],
             "importance": c["importance"]}

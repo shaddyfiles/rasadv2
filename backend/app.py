@@ -16,6 +16,7 @@ import assistant
 import forecast as fc
 import optimizer
 import predict
+import scenarios
 import store
 from config import Config
 from db import DB, jload
@@ -114,6 +115,7 @@ def make_plan(weights=None, seed_value=0):
 @app.get("/roads")
 @app.get("/assistant")
 @app.get("/predictions")
+@app.get("/whatif")
 def index(_id=None):
     """React pages; the client-side router picks the page from the URL."""
     return send_from_directory(STATIC, "index.html")
@@ -276,6 +278,23 @@ def plan():
     """Run GA + ACO. Body: {"weights": {"speed":1, "safety":1, "economy":1}}."""
     b = body()
     return ok(make_plan(b.get("weights"), int(b.get("seed", 0))), 201)
+
+
+@app.get("/api/whatif")
+def whatif_list():
+    """The ready-made what-if scenarios."""
+    return ok([{"id": k, "label": v["label"], "text": v["text"]} for k, v in scenarios.PRESETS.items()])
+
+
+@app.post("/api/whatif")
+@keyed
+def whatif():
+    """Disrupt a copy of the sector, plan the resupply and measure the stock-out risk before and after.
+    Body: {"scenario": "pass_closed"} or {"close": ["s2"], "ground_helis": true, "surge": {"base": "P2", "pct": 60}}. Changes nothing."""
+    try:
+        return ok(scenarios.run(db, cfg, body()))
+    except ValueError as e:
+        return fail(str(e))
 
 
 @app.get("/api/plan/latest")

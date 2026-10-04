@@ -538,3 +538,21 @@ h1, .lede h1 { letter-spacing: 0; line-height: 1.15; }
 .button, .day-pick .play { font-family: var(--display); font-weight: 500; letter-spacing: .03em; }
 .w-head output { font-style: normal; font-size: .8rem; }
 .why, .site-note { font-style: normal; }
+
+/* What if */
+.scen-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.scen { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--card); border: 1px solid var(--rule); border-radius: 6px; color: var(--ink); font: inherit; cursor: pointer; }
+.scen:hover:not(:disabled) { border-color: var(--navy); }
+.scen:disabled { cursor: progress; opacity: .7; }
+.scen strong { color: var(--navy); }
+.scen span { color: var(--soft); font-size: .92rem; }
+.scen em { font-style: normal; font-size: .85rem; margin-top: auto; color: var(--navy); text-decoration: underline; }
+.scen-done { border-left: 4px solid var(--navy); }
+.whatif small { display: block; font-weight: 400; color: var(--soft); }
+.whatif .num { white-space: nowrap; }
+.whatif .verdict { margin-top: 4px; font-weight: 600; color: var(--ink); }
+.whatif .v-worse { color: var(--bad, #b3261e); }
+.whatif tbody th { text-align: left; vertical-align: top; min-width: 16rem; }
+.whatif tbody th small { font-weight: 400; font-size: .85rem; line-height: 1.35; }
+.whatif tbody th .verdict { font-weight: 600; }
+.whatif td { vertical-align: top; }

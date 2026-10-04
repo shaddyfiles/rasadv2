@@ -8,8 +8,9 @@ import Movements from './pages/Movements.jsx';
 import Roads from './pages/Roads.jsx';
 import Assistant from './pages/Assistant.jsx';
 import Predictions from './pages/Predictions.jsx';
+import WhatIf from './pages/WhatIf.jsx';
 
-export const NAV = [['/', 'Home'], ['/bases', 'Bases'], ['/predictions', 'Predictions'], ['/plan', 'Resupply plan'], ['/movements', 'Movements'], ['/roads', 'Roads'], ['/assistant', 'Ask Rasad']];
+export const NAV = [['/', 'Home'], ['/bases', 'Bases'], ['/predictions', 'Predictions'], ['/plan', 'Resupply plan'], ['/whatif', 'What if'], ['/movements', 'Movements'], ['/roads', 'Roads'], ['/assistant', 'Ask Rasad']];
 const TITLES = Object.fromEntries(NAV);
 
 function route(path) {
@@ -19,6 +20,7 @@ function route(path) {
     case '/': return <Overview />;
     case '/bases': return <Bases />;
     case '/plan': return <Plan />;
+    case '/whatif': return <WhatIf />;
     case '/movements': return <Movements />;
     case '/roads': return <Roads />;
     case '/assistant': return <Assistant />;

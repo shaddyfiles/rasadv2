@@ -124,13 +124,16 @@ def test_plan_respects_capacity_and_bridge_limit(client):
     import app as rasad_app
     client.post("/api/reset", json={})
     p = client.post("/api/plan", json={}).get_json()
-    cap = {v["id"]: v["cap_kg"] for v in rasad_app.db.q("SELECT id, cap_kg FROM vehicles")}
-    bridge = next(r["max_kg"] for r in rasad_app.db.q("SELECT id, max_kg FROM roads WHERE id = 's5'"))
+    veh = {v["id"]: v for v in rasad_app.db.q("SELECT id, type, cap_kg FROM vehicles")}
+    bridge = rasad_app.db.q("SELECT max_kg FROM roads WHERE id = 's5'", one=True)["max_kg"]
     assert p["trips"]
+    on_bridge = 0
     for t in p["trips"]:
-        assert t["kg"] <= cap[t["vehicle_id"]] + 1
-        if any("s5" in l.get("roads", []) for l in t["legs"]) and t["vehicle_id"].startswith("T"):
+        assert t["kg"] <= veh[t["vehicle_id"]]["cap_kg"] + 1
+        if veh[t["vehicle_id"]]["type"] == "truck" and any("s5" in l.get("roads", []) for l in t["legs"]):
+            on_bridge += 1
             assert t["kg"] <= bridge + 1
+    assert on_bridge, "no truck crosses the Kesari track, so the bridge limit is not exercised"
 
 
 def test_partial_dispatch_keeps_unsent_trips(client):
@@ -152,3 +155,32 @@ def test_partial_dispatch_keeps_unsent_trips(client):
     later = client.post(f"/api/plan/{p['id']}/dispatch", json={}).get_json()["shipments"]
     assert len(later) == len(waiting)                                              # nothing is sent twice
     assert client.get("/api/plan/latest").get_json()["status"] == "dispatched"
+
+
+def test_whatif_scenarios_change_nothing_and_measure_effect(client):
+    client.post("/api/reset", json={})
+    roads_before = client.get("/api/roads").get_json()
+    plan_before = client.get("/api/plan/latest").get_json()
+    listing = client.get("/api/whatif").get_json()
+    assert {x["id"] for x in listing} >= {"today", "pass_closed", "air_grounded", "surge"}
+    r = client.post("/api/whatif", json={"scenario": "air_grounded"}).get_json()
+    assert r["changes"] and r["plan"]["helicopters"] == 0                      # no helicopter is planned once they are grounded
+    assert r["old_plan"]["trips_lost"] >= 1                                    # grounded helicopters drop loads from the old plan
+    assert r["after"]["expected_stockouts"] <= r["old_plan"]["expected_stockouts"] + 1e-9
+    assert r["after"]["expected_stockouts"] < r["nothing"]["expected_stockouts"]
+    assert r["verdict"]["id"] in ("replan", "reroute", "holds", "worse")
+    assert client.get("/api/roads").get_json() == roads_before                  # the live sector is untouched
+    assert client.get("/api/plan/latest").get_json() == plan_before              # no plan is saved either
+
+
+def test_whatif_rejects_bad_input(client):
+    assert client.post("/api/whatif", json={"scenario": "nope"}).status_code == 400
+    assert client.post("/api/whatif", json={"close": ["zz"]}).status_code == 400
+    assert client.post("/api/whatif", json={"surge": {"base": "BD", "pct": 50}}).status_code == 400
+    assert client.post("/api/whatif", json={"close": ["s2"], "ground_helis": True}).status_code == 200
+
+
+def test_walk_forward_error_is_out_of_sample(client):
+    m = client.get("/api/forecast/metrics").get_json()["walk_forward"]
+    assert len(m["folds"]) == 3 and all(f["from"] < f["to"] for f in m["folds"])
+    assert 0 < m["wape"]["ens"] < m["wape"]["naive"]               # still beats last week's average without tuning on the window

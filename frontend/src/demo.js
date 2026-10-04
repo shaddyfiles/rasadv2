@@ -42,6 +42,7 @@ export async function demoApi(path, { method, body } = {}) {
   if (verb === 'GET') {
     await wait(60);
     if (path === '/plan/latest') return s.plan;
+    if (path === '/whatif') return d.whatif.list;
     if (path.startsWith('/forecast/')) {
       if (d.forecasts[path]) return d.forecasts[path];
       throw new Error('Forecasts are shown for forward posts only.');
@@ -63,6 +64,12 @@ export async function demoApi(path, { method, body } = {}) {
     s.dispatched = s.variant;
     s.plan = { ...s.plan, status: 'dispatched' };
     return d.plans[s.variant].dispatch;
+  }
+  if (path === '/whatif') {
+    await wait(700);
+    const r = d.whatif.results[body.scenario];
+    if (r) return r;
+    throw new Error('The demo has recorded results for the five ready-made scenarios only.');
   }
   if (path === '/command') { await wait(350); return command(body.text); }
   if (path === '/alerts/brief') { await wait(350); return d.brief; }
