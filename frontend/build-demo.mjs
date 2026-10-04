@@ -2,8 +2,9 @@
 // First record the data:  python demo/capture.py   then:  node build-demo.mjs   (writes dist-demo/rasad-demo.html)
 import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const here = p => new URL(p, import.meta.url).pathname;
+const here = p => fileURLToPath(new URL(p, import.meta.url));
 const r = await esbuild.build({
   entryPoints: ['src/main.jsx'], bundle: true, minify: true, format: 'iife', target: ['es2020'],
   jsx: 'automatic', loader: { '.js': 'jsx' }, outdir: 'out', entryNames: 'app', write: false,
