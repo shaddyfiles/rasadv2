@@ -104,3 +104,51 @@ def test_hazards_for_map(client):
     tangla = roads["s2"]["days"]
     assert max(d["p"] for d in tangla) > 0.9 and any(d["avalanche"] == "high" for d in tangla)   # the forecast storm
     assert all(d["avalanche"] is None for d in roads["s1"]["days"])                              # valley highway stays safe
+
+
+def test_command_and_brief_need_key_when_set(client, monkeypatch):
+    import app as rasad_app
+    monkeypatch.setattr(rasad_app.cfg, "API_KEY", "secret")
+    for path, js in (("/api/command", {"text": "alerts"}), ("/api/alerts/brief", {}), ("/api/reset", {})):
+        assert client.post(path, json=js).status_code == 401
+        assert client.post(path, json=js, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.post("/api/command", json={"text": "alerts"}, headers={"X-API-Key": "secret"}).status_code == 200
+    assert client.get("/api/bases").status_code == 200       # reads stay open
+
+
+def test_cors_off_by_default(client):
+    assert "Access-Control-Allow-Origin" not in client.get("/api/health").headers
+
+
+def test_plan_respects_capacity_and_bridge_limit(client):
+    import app as rasad_app
+    client.post("/api/reset", json={})
+    p = client.post("/api/plan", json={}).get_json()
+    cap = {v["id"]: v["cap_kg"] for v in rasad_app.db.q("SELECT id, cap_kg FROM vehicles")}
+    bridge = next(r["max_kg"] for r in rasad_app.db.q("SELECT id, max_kg FROM roads WHERE id = 's5'"))
+    assert p["trips"]
+    for t in p["trips"]:
+        assert t["kg"] <= cap[t["vehicle_id"]] + 1
+        if any("s5" in l.get("roads", []) for l in t["legs"]) and t["vehicle_id"].startswith("T"):
+            assert t["kg"] <= bridge + 1
+
+
+def test_partial_dispatch_keeps_unsent_trips(client):
+    import app as rasad_app
+    client.post("/api/reset", json={})
+    p = client.post("/api/plan", json={}).get_json()
+    vehicles = list(dict.fromkeys(t["vehicle_id"] for t in p["trips"]))
+    if len(vehicles) < 2:
+        pytest.skip("plan has a single vehicle")
+    busy = vehicles[-1]
+    rasad_app.db.x("UPDATE vehicles SET status = 'busy' WHERE id = ?", (busy,))
+    rasad_app.db.commit()
+    sent = client.post(f"/api/plan/{p['id']}/dispatch", json={}).get_json()["shipments"]
+    waiting = [t for t in p["trips"] if t["vehicle_id"] == busy]
+    assert len(sent) == len(p["trips"]) - len(waiting)
+    assert client.get("/api/plan/latest").get_json()["status"] == "proposed"      # unsent trips can still go
+    rasad_app.db.x("UPDATE vehicles SET status = 'idle' WHERE id = ?", (busy,))
+    rasad_app.db.commit()
+    later = client.post(f"/api/plan/{p['id']}/dispatch", json={}).get_json()["shipments"]
+    assert len(later) == len(waiting)                                              # nothing is sent twice
+    assert client.get("/api/plan/latest").get_json()["status"] == "dispatched"

@@ -5,4 +5,3 @@ scikit-learn>=1.4
 requests>=2.31        # Qwen3-8B server calls
 psycopg2-binary>=2.9  # PostgreSQL + PostGIS
 gunicorn>=22.0
-pytest>=8.0

@@ -3,6 +3,8 @@
 Run:  python app.py            (dev, http://localhost:5000)
       gunicorn -w 2 --threads 4 -b 0.0.0.0:8000 app:app
 """
+import datetime
+import hmac
 import json
 import math
 import os
@@ -54,11 +56,25 @@ def body():
     return request.get_json(silent=True) or {}
 
 
+def authorised():
+    return not cfg.API_KEY or hmac.compare_digest(request.headers.get("X-API-Key", ""), cfg.API_KEY)
+
+
+def keyed(fn):
+    """Needs X-API-Key when RASAD_API_KEY is set (for routes that do not write but are costly or sensitive)."""
+    @wraps(fn)
+    def inner(*a, **k):
+        if not authorised():
+            return fail("missing or wrong X-API-Key", 401)
+        return fn(*a, **k)
+    return inner
+
+
 def write(fn):
     """Writes need X-API-Key when RASAD_API_KEY is set, and run one at a time."""
     @wraps(fn)
     def inner(*a, **k):
-        if cfg.API_KEY and request.headers.get("X-API-Key") != cfg.API_KEY:
+        if not authorised():
             return fail("missing or wrong X-API-Key", 401)
         with db.lock:
             try:
@@ -74,9 +90,11 @@ def write(fn):
 
 @app.after_request
 def cors(resp):
-    resp.headers["Access-Control-Allow-Origin"] = os.environ.get("RASAD_CORS_ORIGIN", "*")
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-API-Key"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, OPTIONS"
+    origin = os.environ.get("RASAD_CORS_ORIGIN")      # the UI is served from this app, so CORS is off unless set
+    if origin:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-API-Key"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, OPTIONS"
     return resp
 
 
@@ -105,7 +123,7 @@ def index(_id=None):
 @app.get("/api/health")
 def health():
     """Database, forecasting engine and Qwen3 status."""
-    return ok({"today": __import__("datetime").date.today().isoformat(), "db": db.kind, "forecast_engine": fc.ENGINE, "llm": assistant.status(cfg), "api_key_required": bool(cfg.API_KEY)})
+    return ok({"today": datetime.date.today().isoformat(), "db": db.kind, "forecast_engine": fc.ENGINE, "llm": assistant.status(cfg), "api_key_required": bool(cfg.API_KEY)})
 
 
 @app.get("/api/map")
@@ -227,7 +245,7 @@ def hazards():
 @app.get("/api/weather")
 def weather():
     """Observed weather for the last 7 days and the 14-day forecast, per zone."""
-    since = (__import__("datetime").date.today() - __import__("datetime").timedelta(days=7)).isoformat()
+    since = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
     return ok(db.q("SELECT day, zone, snow_cm, temp_c, wind_kmh, kind FROM weather WHERE day >= ? ORDER BY zone, day", (since,)))
 
 
@@ -298,12 +316,14 @@ def alerts():
 
 
 @app.post("/api/alerts/brief")
+@keyed
 def alerts_brief():
     """Qwen3 alert briefing (template when offline)."""
     return ok(assistant.brief(db, cfg, store.alerts(store.snapshot(db))))
 
 
 @app.post("/api/command")
+@keyed
 def command():
     """Natural-language command. Body: {"text": "close Tangla road", "history": [...]}.
     Returns a reply plus any proposed write actions for the user to confirm."""
