@@ -111,6 +111,17 @@ The app runs `CREATE EXTENSION postgis`, creates the tables with `geometry(Point
 - `ST_GeomFromGeoJSON` writes geometry.
 - `ST_DWithin` and `ST_Distance` on geography answer `GET /api/bases/nearby?lat=&lon=&km=`.
 
+## Deploy on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/shaddyfiles/rasadv2)
+
+`render.yaml` is a Render Blueprint: the Docker web service plus a PostgreSQL 16 database (PostGIS is enabled by the app on first start), both on the free plan in Singapore. Click the button, sign in to Render with GitHub, and approve the Blueprint. The first build takes a few minutes; the app is then at `https://rasad.onrender.com` or a similar address Render shows.
+
+- It is an open demo: no API key, so anyone can plan, dispatch and reset the synthetic sector. Set `RASAD_API_KEY` in Render to lock writes.
+- Weather is the real-weather replay (`RASAD_REAL_DATA=replay`), read from the committed cache, so no download is needed.
+- Free plan: the service sleeps after 15 minutes without visits (the next visit takes about a minute), and Render deletes free databases 30 days after creation.
+- Tested locally under the same settings (port 10000, one worker, 512 MB memory cap, empty database): peak memory 137 MiB, and every page and action worked.
+
 ## Real weather
 
 The weather that drives road closures can be real, from [Open-Meteo](https://open-meteo.com/) (free, no key): daily snowfall, mean temperature (downscaled to each zone's altitude) and peak wind at each of the four weather zones, taken at the zones' real coordinates.

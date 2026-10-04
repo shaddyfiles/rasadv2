@@ -16,5 +16,7 @@ COPY backend/ ./
 COPY --from=ui /static ./static
 RUN useradd -m rasad
 USER rasad
+# PORT is set by hosts such as Render; gunicorn reads the number of worker processes from WEB_CONCURRENCY.
+ENV PORT=8000 WEB_CONCURRENCY=2
 EXPOSE 8000
-CMD ["gunicorn", "-w", "2", "--threads", "4", "--timeout", "120", "-b", "0.0.0.0:8000", "app:app"]
+CMD exec gunicorn --threads 4 --timeout 120 -b 0.0.0.0:${PORT} app:app
