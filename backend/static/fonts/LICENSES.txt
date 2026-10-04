@@ -1,0 +1,5 @@
+All fonts are under the SIL Open Font License 1.1, which allows bundling and redistribution with the application.
+Tektur (tektur-*.woff): headings. Licence text in Tektur-OFL.txt.
+Outfit (outfit-*.woff): body text. Licence text in Outfit-OFL.txt.
+Geist Mono (geistmono-*.woff): numbers, percentages and data labels. Licence text in GeistMono-OFL.txt.
+Poppins Bold, Devanagari subset (poppins-deva-bold.woff): the Hindi name रसद. By the Indian Type Foundry.

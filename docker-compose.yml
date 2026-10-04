@@ -1,0 +1,42 @@
+# docker compose up -d --build            -> PostGIS + API/UI on :8000
+# docker compose --profile llm up -d      -> also Qwen3-8B on vLLM (NVIDIA GPU, ~16 GB+ VRAM)
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: rasad
+      POSTGRES_USER: rasad
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rasad"]
+      interval: 5s
+      retries: 12
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://rasad:${POSTGRES_PASSWORD:-change-me}@db:5432/rasad
+      RASAD_API_KEY: ${RASAD_API_KEY:-}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-http://llm:8000/v1}
+      QWEN_MODEL: ${QWEN_MODEL:-Qwen/Qwen3-8B}
+    depends_on:
+      db: { condition: service_healthy }
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  llm:
+    profiles: ["llm"]
+    image: vllm/vllm-openai:latest
+    command: ["--model", "Qwen/Qwen3-8B", "--enable-auto-tool-choice", "--tool-call-parser", "hermes", "--max-model-len", "16384"]
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+    volumes: [hf:/root/.cache/huggingface]
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+
+volumes:
+  pgdata:
+  hf:
