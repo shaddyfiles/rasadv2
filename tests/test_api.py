@@ -257,3 +257,85 @@ def test_pyvrp_benchmark_plan_is_a_valid_rasad_plan(client):
     assert len(genes) == len(ctx["lots"])
     m = bench.opt.evaluate(genes, ctx)
     assert m["penalty"] == 0 and m["deferred"] < len(genes)
+
+
+def test_requests_leave_no_open_transaction(client):
+    """An open read transaction holds PostgreSQL table locks; a failed one breaks the connection for good."""
+    import app as rasad_app
+    for path in ("/api/bases", "/api/predict", "/api/hazards", "/api/plan/latest"):
+        assert client.get(path).status_code == 200
+        assert not rasad_app.db.in_transaction(), path
+
+
+def _pg_only():
+    url = os.environ.get("RASAD_TEST_DATABASE_URL", "")
+    if not url.startswith(("postgres://", "postgresql://")):
+        pytest.skip("needs RASAD_TEST_DATABASE_URL pointing at PostgreSQL")
+    return url
+
+
+def test_reset_is_not_blocked_by_another_threads_read(client):
+    """Docker regression: a reader in another worker thread used to keep its transaction open, so DROP TABLE in
+    /api/reset waited forever and every later request queued behind it."""
+    _pg_only()
+    import threading
+    t = threading.Thread(target=lambda: client.get("/api/bases"))
+    t.start()
+    t.join(30)
+    done = {}
+    r = threading.Thread(target=lambda: done.setdefault("code", client.post("/api/reset", json={}).status_code))
+    r.start()
+    r.join(60)
+    assert done.get("code") == 200, "reset did not finish within 60 s"
+
+
+def test_workers_booting_together_seed_once(tmp_path):
+    """Docker regression: gunicorn's workers each import app.py; on an empty database they used to seed at once and crash."""
+    import subprocess
+    import psycopg2
+    url = _pg_only()
+    base, name = url.rsplit("/", 1)
+    fresh = f"{name}_boot"
+    admin = psycopg2.connect(f"{base}/postgres")
+    admin.autocommit = True
+    admin.cursor().execute(f"DROP DATABASE IF EXISTS {fresh}")
+    admin.cursor().execute(f"CREATE DATABASE {fresh}")
+    try:
+        env = {**os.environ, "DATABASE_URL": f"{base}/{fresh}"}
+        backend = os.path.join(os.path.dirname(__file__), "..", "backend")
+        procs = [subprocess.Popen([sys.executable, "-c", "import app"], cwd=backend, env=env,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(3)]
+        outs = [p.communicate(timeout=300) for p in procs]
+        assert all(p.returncode == 0 for p in procs), [o[1].decode()[-500:] for o in outs]
+        c = psycopg2.connect(f"{base}/{fresh}")
+        cur = c.cursor()
+        cur.execute("SELECT COUNT(*) FROM bases")
+        assert cur.fetchone()[0] == 9
+        c.close()
+    finally:
+        admin.cursor().execute(f"DROP DATABASE IF EXISTS {fresh} WITH (FORCE)")
+        admin.close()
+
+
+def test_readers_never_see_a_half_reset_sector(client):
+    """Docker regression: readers in other threads used to hit an emptied database (500s) or deadlock with DROP TABLE
+    while /api/reset ran. Now a reset swaps the data in one transaction, so every read succeeds."""
+    _pg_only()
+    import threading
+    import time
+    stop, errors = time.time() + 20, []
+
+    def read():
+        while time.time() < stop:
+            for path in ("/api/predict", "/api/bases", "/api/hazards", "/api/alerts"):
+                code = client.get(path).status_code
+                if code != 200:
+                    errors.append((path, code))
+
+    readers = [threading.Thread(target=read) for _ in range(4)]
+    for t in readers:
+        t.start()
+    resets = [client.post("/api/reset", json={}).status_code for _ in range(3)]
+    for t in readers:
+        t.join(120)
+    assert resets == [200, 200, 200] and not errors, (resets, errors[:5])

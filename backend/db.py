@@ -5,8 +5,10 @@ with GiST indexes; on SQLite it is stored as GeoJSON text.
 """
 import json
 import math
+import re
 import sqlite3
 import threading
+from contextlib import contextmanager
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS items (
@@ -112,26 +114,77 @@ class DB:
     def rollback(self):
         self.con.rollback()
 
-    # ---------------------------------------------------------- schema
-    def create_schema(self, drop=False):
-        tables = ["meta", "road_history", "weather", "shipments", "plans", "vehicles", "roads", "consumption", "inventory", "bases", "items"]
-        cur = self.con.cursor()
-        if drop:
-            for t in tables:
-                cur.execute(f"DROP TABLE IF EXISTS {t}" + (" CASCADE" if self.pg else ""))
+    def in_transaction(self):
+        c = getattr(self._local, "c", None)
+        if c is None:
+            return False
         if self.pg:
+            import psycopg2.extensions as ext
+            return c.get_transaction_status() != ext.TRANSACTION_STATUS_IDLE
+        return c.in_transaction
+
+    def end_request(self):
+        """Close this thread's open transaction. Writes commit explicitly, so anything still open is a read (or a
+        failed write) and is rolled back. On PostgreSQL an open read transaction holds table locks until it ends,
+        which blocks schema changes from another worker, and a failed one refuses every later query."""
+        if self.in_transaction():
+            self.rollback()
+
+    @contextmanager
+    def boot_lock(self):
+        """One seeder at a time across every worker process (gunicorn -w N), not just across threads."""
+        with self.lock:
+            if not self.pg:
+                yield
+                return
+            self.x("SELECT pg_advisory_lock(26251)")
+            try:
+                yield
+            finally:
+                self.end_request()
+                self.x("SELECT pg_advisory_unlock(26251)")
+                self.end_request()
+
+    # ---------------------------------------------------------- schema
+    TABLES = ["meta", "road_history", "weather", "shipments", "plans", "vehicles", "roads", "consumption", "inventory", "bases", "items"]
+
+    def _existing(self):
+        if self.pg:
+            rows = self.q("SELECT tablename AS t FROM pg_tables WHERE schemaname = current_schema()")
+        else:
+            rows = self.q("SELECT name AS t FROM sqlite_master WHERE type = 'table'")
+        return {r["t"] for r in rows}
+
+    def create_schema(self, drop=False):
+        """Create any missing tables. drop=True also empties every table for a re-seed.
+
+        Emptying is DELETE, not DROP TABLE, and nothing is committed here: the caller commits once the new data is in.
+        On PostgreSQL deleting rows takes no lock that blocks readers, so other workers keep reading the old sector
+        until the re-seed commits and then see the new one whole, instead of blocking, deadlocking, or seeing it empty."""
+        have = self._existing()
+        cur = self.con.cursor()
+        if self.pg and "bases" not in have:
             cur.execute("CREATE EXTENSION IF NOT EXISTS postgis")
         ddl = SCHEMA.replace("{AUTO}", "SERIAL PRIMARY KEY" if self.pg else "INTEGER PRIMARY KEY AUTOINCREMENT")
         ddl = ddl.replace("{REAL}", "DOUBLE PRECISION" if self.pg else "REAL")
         ddl = ddl.replace("{POINT}", "geometry(Point, 4326)" if self.pg else "TEXT")
         ddl = ddl.replace("{LINE}", "geometry(LineString, 4326)" if self.pg else "TEXT")
-        for stmt in [s for s in ddl.split(";") if s.strip()]:
+        extra = POSTGIS_EXTRA if self.pg else ""
+        for stmt in [x.strip() for x in (ddl + ";" + extra).split(";") if x.strip()]:
+            m = re.search(r"(?:TABLE IF NOT EXISTS|ON)\s+(\w+)", stmt)
+            if stmt.upper().startswith("CREATE EXTENSION") or (m and m.group(1) in have):
+                continue                       # already there: skip it, so a re-seed takes no table lock
             cur.execute(stmt)
-        if self.pg:
-            for stmt in [s for s in POSTGIS_EXTRA.split(";") if s.strip()]:
-                cur.execute(stmt)
+        if drop:
+            for t in self.TABLES:              # children first
+                if t in have:
+                    cur.execute(f"DELETE FROM {t}")
+            if self.pg:
+                for t in ("consumption", "plans", "shipments"):
+                    cur.execute(f"SELECT setval(pg_get_serial_sequence('{t}', 'id'), 1, false)")
+            elif "sqlite_sequence" in have:
+                cur.execute("DELETE FROM sqlite_sequence")
         cur.close()
-        self.commit()
 
     def has_schema(self):
         try:
