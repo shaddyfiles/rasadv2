@@ -124,13 +124,16 @@ def test_plan_respects_capacity_and_bridge_limit(client):
     import app as rasad_app
     client.post("/api/reset", json={})
     p = client.post("/api/plan", json={}).get_json()
-    cap = {v["id"]: v["cap_kg"] for v in rasad_app.db.q("SELECT id, cap_kg FROM vehicles")}
-    bridge = next(r["max_kg"] for r in rasad_app.db.q("SELECT id, max_kg FROM roads WHERE id = 's5'"))
+    veh = {v["id"]: v for v in rasad_app.db.q("SELECT id, type, cap_kg FROM vehicles")}
+    bridge = rasad_app.db.q("SELECT max_kg FROM roads WHERE id = 's5'", one=True)["max_kg"]
     assert p["trips"]
+    on_bridge = 0
     for t in p["trips"]:
-        assert t["kg"] <= cap[t["vehicle_id"]] + 1
-        if any("s5" in l.get("roads", []) for l in t["legs"]) and t["vehicle_id"].startswith("T"):
+        assert t["kg"] <= veh[t["vehicle_id"]]["cap_kg"] + 1
+        if veh[t["vehicle_id"]]["type"] == "truck" and any("s5" in l.get("roads", []) for l in t["legs"]):
+            on_bridge += 1
             assert t["kg"] <= bridge + 1
+    assert on_bridge, "no truck crosses the Kesari track, so the bridge limit is not exercised"
 
 
 def test_partial_dispatch_keeps_unsent_trips(client):
