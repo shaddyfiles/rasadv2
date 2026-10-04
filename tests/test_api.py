@@ -184,3 +184,72 @@ def test_walk_forward_error_is_out_of_sample(client):
     m = client.get("/api/forecast/metrics").get_json()["walk_forward"]
     assert len(m["folds"]) == 3 and all(f["from"] < f["to"] for f in m["folds"])
     assert 0 < m["wape"]["ens"] < m["wape"]["naive"]               # still beats last week's average without tuning on the window
+
+
+def test_real_weather_replay_seeds_from_cache_or_download(tmp_path, monkeypatch):
+    """Real-weather mode, with the Open-Meteo call replaced by a fake so no network is needed."""
+    from datetime import date, timedelta
+    import realdata
+    import seed as seeder
+    from db import DB
+
+    def fake_get(url, **p):
+        lo, hi = date.fromisoformat(p["start_date"]), date.fromisoformat(p["end_date"])
+        days = [lo + timedelta(days=i) for i in range((hi - lo).days + 1)]
+        return {d.isoformat(): (7.0 if d.isoformat() == "2026-03-10" else 0.5, -3.0, 12.0) for d in days}
+
+    monkeypatch.setenv("RASAD_REAL_DATA", "replay:2026-03-08")
+    monkeypatch.setattr(realdata, "CACHE", str(tmp_path / "wx.json"))
+    monkeypatch.setattr(realdata, "_get", fake_get)
+    d = DB(f"sqlite:///{tmp_path}/real.db")
+    seeder.seed(d)
+    assert "replayed from 2025-11-08 to 2026-03-21" in d.q("SELECT value FROM meta WHERE key = 'weather_source'", one=True)["value"]
+    assert d.q("SELECT COUNT(*) AS n FROM weather", one=True)["n"] == 4 * 134
+    storm = d.q("SELECT snow_cm FROM weather WHERE zone = 'tangla' AND day = ?", ((date.today() + timedelta(days=2)).isoformat(),), one=True)
+    assert storm["snow_cm"] == 7.0                                   # day 2 of the replay is 2026-03-10: the real weather, not random draws
+    # a second seed reads the cache and does not call the service
+    monkeypatch.setattr(realdata, "_get", lambda *a, **k: (_ for _ in ()).throw(AssertionError("downloaded again")))
+    seeder.seed(DB(f"sqlite:///{tmp_path}/real2.db"))
+
+
+def test_real_weather_failure_falls_back_to_synthetic(tmp_path, monkeypatch):
+    import requests
+    import realdata
+    import seed as seeder
+    from db import DB
+    monkeypatch.setenv("RASAD_REAL_DATA", "live")
+    monkeypatch.setattr(realdata, "CACHE", str(tmp_path / "none.json"))
+    monkeypatch.setattr(realdata, "_get", lambda *a, **k: (_ for _ in ()).throw(requests.ConnectionError("offline")))
+    d = DB(f"sqlite:///{tmp_path}/fb.db")
+    seeder.seed(d)
+    assert d.q("SELECT value FROM meta WHERE key = 'weather_source'", one=True)["value"] == "synthetic"
+
+
+def test_helicopter_payload_falls_with_altitude(client, monkeypatch):
+    import app as rasad_app
+    from optimizer import heli_derate
+    cfg = rasad_app.cfg
+    assert heli_derate(3000, cfg) == 1.0 and heli_derate(4000, cfg) < 1.0 and heli_derate(9000, cfg) == cfg.HELI_DERATE_FLOOR
+    client.post("/api/reset", json={})
+    plan = client.post("/api/plan", json={}).get_json()
+    helis = [t for t in plan["trips"] if t["type"] == "heli"]
+    assert helis and plan["metrics"]["penalty"] == 0
+    for t in helis:
+        assert t["kg"] <= t["cap_kg"] + 1 and t["cap_kg"] < 1200                # thin air cuts the lift below the rating
+        assert "thin air" in t["why"]
+    monkeypatch.setattr(cfg, "HELI_DERATE_PER_KM", 0.0)                          # no derating: the full rating is available
+    flat = client.post("/api/plan", json={}).get_json()
+    assert all(t["cap_kg"] == 1200 for t in flat["trips"] if t["type"] == "heli")
+
+
+def test_pyvrp_benchmark_plan_is_a_valid_rasad_plan(client):
+    """The benchmark turns a PyVRP solution into a Rasad plan; with trucks capped at the bridge limit it must break no hard limit."""
+    pytest.importorskip("pyvrp")
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "benchmarks"))
+    import pyvrp_vs_ga as bench
+    snap = bench.store.snapshot(bench.rasad.db)
+    ctx = bench.opt.context(snap, None, bench.rasad.cfg, seed=0)
+    genes, _ = bench.pyvrp_genes(ctx, seconds=1, cap_trucks=True)
+    assert len(genes) == len(ctx["lots"])
+    m = bench.opt.evaluate(genes, ctx)
+    assert m["penalty"] == 0 and m["deferred"] < len(genes)

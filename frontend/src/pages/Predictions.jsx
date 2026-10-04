@@ -112,6 +112,7 @@ export default function Predictions() {
         <div>
           <h2>How far to trust the road model</h2>
           <p className="note">Trained on {rs.trained_on_days} days of weather and recorded closures, then tested on the last {rs.holdout_days} days it had not seen.</p>
+          <p className="note"><strong>Weather source:</strong> {data.weather_source === 'synthetic' ? 'synthetic, generated for this demo.' : `${data.weather_source}.`} {data.weather_source !== 'synthetic' && 'The weather is real; the road closures it is tested against are still simulated from a snow rule, because no public record exists for these fictional roads.'}</p>
           <table className="ledger">
             <tbody>
               <tr><td>Ranks a closed day above an open day</td><td className="n"><strong>{rs.auc ? `${Math.round(rs.auc * 100)}% of the time` : '–'}</strong></td></tr>

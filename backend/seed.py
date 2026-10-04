@@ -1,9 +1,12 @@
 """Seed a fictional sector (Sector Himgiri): bases, road network geometry, fleet,
-60 days of consumption history and current inventory. All data is synthetic."""
+60 days of consumption history and current inventory. All data is synthetic, except the weather when
+RASAD_REAL_DATA=1 (see realdata.py)."""
 import json
 import math
 import random
 from datetime import date, timedelta
+
+import realdata
 
 ITEMS = [  # id, name, unit, kg per unit, criticality
     ("ration", "Rations", "kg", 1.0, 0.8),
@@ -134,8 +137,15 @@ def seed(db, seed_value=26251):
         db.commit()
 
 
-def closure_truth(snow3, wind, temp, alt, mule, rng):
+# ERA5 snowfall in this cold desert is light (3-day totals of about 10 cm are a big event), so with real weather
+# the hidden closure rule reads snow on a scale where 10 cm counts like 40 cm of the synthetic storms.
+# The closures themselves are still simulated: no public record exists for these fictional roads.
+REAL_SNOW_SCALE = 0.25
+
+
+def closure_truth(snow3, wind, temp, alt, mule, rng, snow_scale=1.0):
     """Hidden rule that generates the historical closures the model learns from."""
+    snow3 = snow3 / snow_scale
     x = snow3 * (1 + (alt - 4500) / 1800) + 0.35 * max(0.0, wind - 35) + 6 * mule + 0.8 * max(0.0, temp - 2) * (snow3 > 15)
     p = 1 / (1 + math.exp(-(x - 34) / 6))
     return int(rng.random() < p)
@@ -152,14 +162,20 @@ def seed_weather(db, rng, today):
             break
         storms.append((d, 0.8 + rng.random() * 0.8, 10 + rng.random() * 26))
     storms.append((3.5, 1.2, 40))   # the storm in the current forecast
+    got = realdata.weather(realdata.zone_points(ROADS, ROAD_ZONE, lonlat), ZONES, today) if realdata.enabled() else None
+    real, label = got if got else (None, "synthetic")
+    db.x("INSERT INTO meta(key, value) VALUES ('weather_source', ?)", (label,))
     for zone, alt in ZONES.items():
         zf = {"valley": 0.2, "tangla": 0.85, "zarla": 0.7, "high": 0.55}[zone]
         for day in range(-120, 14):
-            snow = max(0.0, rng.gauss(1.5, 1.2)) * zf
-            for c, w, a in storms:
-                snow += zf * a * math.exp(-((day - c) ** 2) / (2 * w * w))
-            temp = 9 - (alt - 3500) * 0.0062 - 0.12 * day - 0.15 * snow + rng.gauss(0, 1.5)
-            wind = max(0.0, rng.gauss(18, 7) + 0.6 * snow)
+            if real:
+                snow, temp, wind = real[(zone, day)]
+            else:
+                snow = max(0.0, rng.gauss(1.5, 1.2)) * zf
+                for c, w, a in storms:
+                    snow += zf * a * math.exp(-((day - c) ** 2) / (2 * w * w))
+                temp = 9 - (alt - 3500) * 0.0062 - 0.12 * day - 0.15 * snow + rng.gauss(0, 1.5)
+                wind = max(0.0, rng.gauss(18, 7) + 0.6 * snow)
             wx[(zone, day)] = (snow, temp, wind)
             rows.append(((today + timedelta(days=day)).isoformat(), zone, round(snow, 1), round(temp, 1), round(wind, 1), "forecast" if day >= 0 else "observed"))
     db.many("INSERT INTO weather(day, zone, snow_cm, temp_c, wind_kmh, kind) VALUES (?,?,?,?,?,?)", rows)
@@ -170,5 +186,5 @@ def seed_weather(db, rng, today):
         for day in range(-120, 0):
             snow3 = sum(wx[(zone, day - k)][0] for k in range(3) if (zone, day - k) in wx)
             _, temp, wind = wx[(zone, day)]
-            hist.append((rid, (today + timedelta(days=day)).isoformat(), closure_truth(snow3, wind, temp, alt, mule, rng)))
+            hist.append((rid, (today + timedelta(days=day)).isoformat(), closure_truth(snow3, wind, temp, alt, mule, rng, REAL_SNOW_SCALE if real else 1.0)))
     db.many("INSERT INTO road_history(road_id, day, closed) VALUES (?,?,?)", hist)

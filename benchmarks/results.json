@@ -1,0 +1,812 @@
+[
+ {
+  "scenario": "Today, as forecast",
+  "seed": 0,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.37,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 16.71,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 2.07,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.35,
+   "lateness": 0.0,
+   "transit_days": 4.7,
+   "risk": 2.62,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Today, as forecast",
+  "seed": 1,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.37,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 16.71,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 2.07,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 13.01,
+   "lateness": 0.0,
+   "transit_days": 3.98,
+   "risk": 2.6,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.35,
+   "lateness": 0.0,
+   "transit_days": 4.7,
+   "risk": 2.62,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 11.7,
+   "lateness": 0.15,
+   "transit_days": 3.28,
+   "risk": 2.13,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 1
+  }
+ },
+ {
+  "scenario": "Today, as forecast",
+  "seed": 2,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.33,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 16.71,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 2.07,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 12.53,
+   "lateness": 0.0,
+   "transit_days": 4.06,
+   "risk": 2.03,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.35,
+   "lateness": 0.0,
+   "transit_days": 4.7,
+   "risk": 2.62,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 12.02,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Tangla La closes",
+  "seed": 0,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.38,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 17.15,
+   "lateness": 0.0,
+   "transit_days": 5.7,
+   "risk": 1.39,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 11.76,
+   "lateness": 0.0,
+   "transit_days": 3.9,
+   "risk": 1.43,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 11.76,
+   "lateness": 0.0,
+   "transit_days": 3.9,
+   "risk": 1.43,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.36,
+   "lateness": 0.0,
+   "transit_days": 5.82,
+   "risk": 1.51,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 11.76,
+   "lateness": 0.0,
+   "transit_days": 3.9,
+   "risk": 1.43,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Tangla La closes",
+  "seed": 1,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.3,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 17.69,
+   "lateness": 0.0,
+   "transit_days": 5.99,
+   "risk": 1.64,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 12.3,
+   "lateness": 0.0,
+   "transit_days": 4.19,
+   "risk": 1.68,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 12.3,
+   "lateness": 0.0,
+   "transit_days": 4.19,
+   "risk": 1.68,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.9,
+   "lateness": 0.0,
+   "transit_days": 6.11,
+   "risk": 1.76,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 12.3,
+   "lateness": 0.0,
+   "transit_days": 4.19,
+   "risk": 1.68,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Tangla La closes",
+  "seed": 2,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.29,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 17.15,
+   "lateness": 0.0,
+   "transit_days": 5.7,
+   "risk": 1.39,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 12.93,
+   "lateness": 0.0,
+   "transit_days": 5.11,
+   "risk": 1.37,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 11.76,
+   "lateness": 0.0,
+   "transit_days": 3.9,
+   "risk": 1.43,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 17.36,
+   "lateness": 0.0,
+   "transit_days": 5.82,
+   "risk": 1.51,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 11.76,
+   "lateness": 0.0,
+   "transit_days": 3.9,
+   "risk": 1.43,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Both passes close",
+  "seed": 0,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.29,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 24.08,
+   "lateness": 0.0,
+   "transit_days": 7.81,
+   "risk": 4.4,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 16.41,
+   "lateness": 0.59,
+   "transit_days": 3.35,
+   "risk": 1.9,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 703.13,
+   "lateness": 0.15,
+   "transit_days": 3.6,
+   "risk": 2.28,
+   "vehicles": 3,
+   "penalty": 690.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 17.4,
+   "lateness": 0.59,
+   "transit_days": 3.02,
+   "risk": 1.42,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 15.05,
+   "lateness": 0.59,
+   "transit_days": 2.5,
+   "risk": 1.38,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Both passes close",
+  "seed": 1,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.3,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 24.61,
+   "lateness": 0.0,
+   "transit_days": 8.1,
+   "risk": 4.65,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 16.75,
+   "lateness": 0.59,
+   "transit_days": 4.0,
+   "risk": 1.58,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 708.67,
+   "lateness": 0.15,
+   "transit_days": 3.89,
+   "risk": 2.53,
+   "vehicles": 3,
+   "penalty": 695.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 17.94,
+   "lateness": 0.59,
+   "transit_days": 3.31,
+   "risk": 1.67,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 15.58,
+   "lateness": 0.59,
+   "transit_days": 2.79,
+   "risk": 1.63,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Both passes close",
+  "seed": 2,
+  "lots": 10,
+  "seconds": {
+   "GA+ACO": 0.29,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 24.08,
+   "lateness": 0.0,
+   "transit_days": 7.81,
+   "risk": 4.4,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 16.41,
+   "lateness": 0.59,
+   "transit_days": 3.35,
+   "risk": 1.9,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 703.13,
+   "lateness": 0.15,
+   "transit_days": 3.6,
+   "risk": 2.28,
+   "vehicles": 3,
+   "penalty": 690.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 17.4,
+   "lateness": 0.59,
+   "transit_days": 3.02,
+   "risk": 1.42,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 15.05,
+   "lateness": 0.59,
+   "transit_days": 2.5,
+   "risk": 1.38,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Passes shut, helicopters grounded",
+  "seed": 0,
+  "lots": 11,
+  "seconds": {
+   "GA+ACO": 0.33,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 31.8,
+   "lateness": 1.05,
+   "transit_days": 7.74,
+   "risk": 4.3,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 26.21,
+   "lateness": 1.65,
+   "transit_days": 4.04,
+   "risk": 1.28,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 713.19,
+   "lateness": 1.2,
+   "transit_days": 4.11,
+   "risk": 2.1,
+   "vehicles": 3,
+   "penalty": 690.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 26.21,
+   "lateness": 1.65,
+   "transit_days": 4.04,
+   "risk": 1.28,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 25.1,
+   "lateness": 1.65,
+   "transit_days": 3.01,
+   "risk": 1.2,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Passes shut, helicopters grounded",
+  "seed": 1,
+  "lots": 11,
+  "seconds": {
+   "GA+ACO": 0.27,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 32.33,
+   "lateness": 1.05,
+   "transit_days": 8.03,
+   "risk": 4.55,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 26.74,
+   "lateness": 1.65,
+   "transit_days": 4.33,
+   "risk": 1.53,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 718.73,
+   "lateness": 1.2,
+   "transit_days": 4.4,
+   "risk": 2.35,
+   "vehicles": 3,
+   "penalty": 695.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 26.74,
+   "lateness": 1.65,
+   "transit_days": 4.33,
+   "risk": 1.53,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 25.64,
+   "lateness": 1.65,
+   "transit_days": 3.3,
+   "risk": 1.46,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Passes shut, helicopters grounded",
+  "seed": 2,
+  "lots": 11,
+  "seconds": {
+   "GA+ACO": 0.29,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 31.8,
+   "lateness": 1.05,
+   "transit_days": 7.74,
+   "risk": 4.3,
+   "vehicles": 6,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 25.1,
+   "lateness": 1.65,
+   "transit_days": 3.01,
+   "risk": 1.2,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP": {
+   "cost": 713.19,
+   "lateness": 1.2,
+   "transit_days": 4.11,
+   "risk": 2.1,
+   "vehicles": 3,
+   "penalty": 690.96,
+   "deferred": 1
+  },
+  "PyVRP cap": {
+   "cost": 26.21,
+   "lateness": 1.65,
+   "transit_days": 4.04,
+   "risk": 1.28,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  },
+  "PyVRP+GA": {
+   "cost": 25.1,
+   "lateness": 1.65,
+   "transit_days": 3.01,
+   "risk": 1.2,
+   "vehicles": 3,
+   "penalty": 0.0,
+   "deferred": 2
+  }
+ },
+ {
+  "scenario": "Troop surge at Kesari (+60%)",
+  "seed": 0,
+  "lots": 12,
+  "seconds": {
+   "GA+ACO": 0.34,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 20.4,
+   "lateness": 0.0,
+   "transit_days": 5.88,
+   "risk": 2.95,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 13.73,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 3.01,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 470.84,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 459.11,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 21.03,
+   "lateness": 0.0,
+   "transit_days": 5.99,
+   "risk": 3.5,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 13.73,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 3.01,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Troop surge at Kesari (+60%)",
+  "seed": 1,
+  "lots": 12,
+  "seconds": {
+   "GA+ACO": 0.37,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 20.4,
+   "lateness": 0.0,
+   "transit_days": 5.88,
+   "risk": 2.95,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 13.73,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 3.01,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 470.84,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 459.11,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 21.03,
+   "lateness": 0.0,
+   "transit_days": 5.99,
+   "risk": 3.5,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 13.73,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 3.01,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ },
+ {
+  "scenario": "Troop surge at Kesari (+60%)",
+  "seed": 2,
+  "lots": 12,
+  "seconds": {
+   "GA+ACO": 0.39,
+   "PyVRP": 3.0
+  },
+  "rules": {
+   "cost": 20.4,
+   "lateness": 0.0,
+   "transit_days": 5.88,
+   "risk": 2.95,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "GA+ACO": {
+   "cost": 15.71,
+   "lateness": 0.0,
+   "transit_days": 4.78,
+   "risk": 2.99,
+   "vehicles": 5,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP": {
+   "cost": 470.84,
+   "lateness": 0.0,
+   "transit_days": 3.49,
+   "risk": 2.11,
+   "vehicles": 4,
+   "penalty": 459.11,
+   "deferred": 0
+  },
+  "PyVRP cap": {
+   "cost": 21.03,
+   "lateness": 0.0,
+   "transit_days": 5.99,
+   "risk": 3.5,
+   "vehicles": 7,
+   "penalty": 0.0,
+   "deferred": 0
+  },
+  "PyVRP+GA": {
+   "cost": 13.73,
+   "lateness": 0.0,
+   "transit_days": 4.58,
+   "risk": 3.01,
+   "vehicles": 4,
+   "penalty": 0.0,
+   "deferred": 0
+  }
+ }
+]
