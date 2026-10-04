@@ -1,0 +1,33 @@
+# Render Blueprint: the Rasad web app (Docker) plus a PostgreSQL database with PostGIS.
+# Deploy: https://render.com/deploy?repo=https://github.com/shaddyfiles/rasadv2
+# Free plan: 512 MB RAM, sleeps after 15 minutes idle, and Render deletes free databases 30 days after creation.
+services:
+  - type: web
+    name: rasad
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rasad-db
+          property: connectionString
+      - key: WEB_CONCURRENCY          # one worker fits in 512 MB
+        value: "1"
+      - key: TZ
+        value: Asia/Kolkata
+      - key: RASAD_REAL_DATA          # real weather (Open-Meteo), replaying the committed winter so no download is needed
+        value: replay
+      # No RASAD_API_KEY: this is an open demo on synthetic data, so anyone can plan, dispatch and reset.
+
+databases:
+  - name: rasad-db
+    plan: free
+    region: singapore
+    databaseName: rasad
+    user: rasad
+    postgresMajorVersion: "16"
