@@ -1,3 +1,4 @@
+# cp .env.example .env  (then set POSTGRES_PASSWORD in .env)
 # docker compose up -d --build            -> PostGIS + API/UI on :8000
 # docker compose --profile llm up -d      -> also Qwen3-8B on vLLM (NVIDIA GPU, ~16 GB+ VRAM)
 services:
@@ -20,6 +21,8 @@ services:
       RASAD_API_KEY: ${RASAD_API_KEY:-}
       QWEN_BASE_URL: ${QWEN_BASE_URL:-http://llm:8000/v1}
       QWEN_MODEL: ${QWEN_MODEL:-Qwen/Qwen3-8B}
+      RASAD_REAL_DATA: ${RASAD_REAL_DATA:-}
+      TZ: ${TZ:-Asia/Kolkata}            # "today", run-out dates and the forecast days follow this time zone
     depends_on:
       db: { condition: service_healthy }
     ports: ["8000:8000"]

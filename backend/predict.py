@@ -89,7 +89,7 @@ def closure_model(db):
         X.append(f)
         y.append(r["closed"])
         test.append(r["day"] >= cut)
-    X, y, test = np.array(X), np.array(y), np.array(test)
+    X, y, test = np.array(X, dtype=float).reshape(-1, len(ROAD_FEATURES)), np.array(y, dtype=int), np.array(test, dtype=bool)
     stats = {"trained_on_days": int(len(set(r["day"] for r in rows))), "closure_rate": float(y.mean()) if len(y) else 0.0}
     if len(set(y[~test])) == 2:
         m = _classifier().fit(X[~test], y[~test])

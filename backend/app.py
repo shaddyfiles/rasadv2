@@ -26,10 +26,15 @@ STATIC = os.path.join(os.path.dirname(__file__), "static")
 app = Flask(__name__, static_folder=STATIC, static_url_path="/static")
 cfg = Config
 db = DB(cfg.DATABASE_URL)
-with db.lock:
+with db.boot_lock():          # every gunicorn worker runs this; only the first one to get the lock seeds
     if not db.has_schema():
         seed(db)
         predict.refresh_road_risk(db, include_manual=True)
+
+
+@app.teardown_request
+def end_transaction(_exc):
+    db.end_request()
 
 
 # ------------------------------------------------------------------ helpers
@@ -381,8 +386,9 @@ def command_execute():
 @write
 def reset():
     """Re-seed the synthetic sector."""
-    seed(db)
-    predict.refresh_road_risk(db, include_manual=True)
+    with db.boot_lock():
+        seed(db)
+        predict.refresh_road_risk(db, include_manual=True)
     return ok({"ok": True})
 
 

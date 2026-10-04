@@ -94,12 +94,12 @@ The built UI is already in `backend/static`. To change the UI:
 cd frontend && npm install && npm run build      # writes backend/static (app.js, app.css, fonts)
 ```
 
-Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 21 end-to-end API tests.
+Tests (from the repo root): `pip install -r backend/requirements-dev.txt && pytest -q`. There are 24 end-to-end API tests (two run only on PostgreSQL; see below).
 
 ## Run with PostgreSQL + PostGIS
 
 ```bash
-export POSTGRES_PASSWORD=choose-one              # required; compose refuses to start without it
+cp .env.example .env                             # then set POSTGRES_PASSWORD (required) and RASAD_API_KEY in .env
 docker compose up -d --build                     # PostGIS 16-3.4 + API/UI on http://localhost:8000
 docker compose --profile llm up -d               # adds Qwen3-8B on vLLM (GPU host)
 ```
@@ -232,10 +232,11 @@ All data is synthetic unless real weather is switched on (below). Sector Himgiri
 ## Verified here, and what isn't
 
 Verified:
-- All 21 API tests pass on SQLite with the scikit-learn fallback.
-- The React website was built with esbuild and every page was clicked through in a headless browser at desktop and phone widths, with no script errors, including the Predictions page.
+- All 22 SQLite-runnable API tests pass with XGBoost 3.4 (and the scikit-learn fallback before that).
+- All 24 API tests pass on **PostgreSQL 16.14 + PostGIS 3.6.2** (portable Windows build), including two that only run there: several workers booting on an empty database at once, and a reset while another thread has just read. Geometry is stored as `geometry(Point/LineString, 4326)` with GiST indexes, and the map, nearby search (`ST_DWithin`, `ST_Distance`), planning, dispatch, delivery, what-if, assistant commands and reset all work there. To repeat: `RASAD_TEST_DATABASE_URL=postgresql://user@localhost:5432/rasad_test pytest -q` against an empty database.
+- The React website was built with esbuild and every page was clicked through in a browser, with no script errors.
+- Real weather from Open-Meteo was downloaded and seeded in both live and replay modes.
 
-Not reachable from the build environment, so test before a demo:
-- The PostGIS path, though the code and Docker files are written for it.
-- XGBoost itself.
+Not yet verified:
+- The Docker image and `docker-compose.yml` (the PostGIS code path they use is verified above).
 - A live Qwen3-8B server.

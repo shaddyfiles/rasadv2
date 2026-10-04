@@ -1,6 +1,7 @@
 Flask>=3.0
 numpy>=1.26
-xgboost>=2.0          # demand forecasting (multi-quantile); falls back to scikit-learn if missing
+xgboost>=2.0; sys_platform != "linux"        # demand forecasting (multi-quantile); falls back to scikit-learn if missing
+xgboost-cpu>=2.0; sys_platform == "linux"    # same module without the 300 MB NVIDIA libraries (the Docker image)
 scikit-learn>=1.4
 requests>=2.31        # Qwen3-8B server calls
 psycopg2-binary>=2.9  # PostgreSQL + PostGIS
